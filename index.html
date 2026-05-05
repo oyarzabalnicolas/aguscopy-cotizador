@@ -221,9 +221,10 @@ body{font-family:"Nunito",sans-serif;background:#F4F6FB;min-height:100vh;padding
 
   <div class="card">
     <div class="card-title">Páginas a color</div>
-    <div class="color-toggle">
-      <span class="color-toggle-label">¿Incluye páginas a color?</span>
-      <label class="toggle-sw"><input type="checkbox" id="colorToggle" onchange="toggleColor()"><span class="toggle-slider"></span></label>
+    <div class="option-row">
+      <button class="opt-btn active" id="btn-color-no" onclick="setModoColor('ninguno')">Sin color</button>
+      <button class="opt-btn" id="btn-color-algunas" onclick="setModoColor('algunas')">Algunas</button>
+      <button class="opt-btn" id="btn-color-todo" onclick="setModoColor('todo')">Todo color</button>
     </div>
     <div class="color-detail" id="colorDetail" style="display:none">
       <span class="field-label">Cantidad de carillas a color</span>
@@ -232,8 +233,9 @@ body{font-family:"Nunito",sans-serif;background:#F4F6FB;min-height:100vh;padding
         <input class="num-input" type="number" id="colorCount" value="1" min="1" inputmode="numeric" oninput="clampColor()">
         <button class="num-btn" onclick="changeColor(1)">+</button>
       </div>
-      <div class="color-note">Ej: tapa + contratapa = 2 carillas · Precio: <span id="colorPrecioLabel">$400</span> c/u</div>
+      <div class="color-note">Ej: tapa + contratapa = 2 carillas · Precio: <span id="colorPrecioLabel">&#36;400</span> c/u</div>
     </div>
+    <div class="info-pill" id="colorTodoInfo" style="display:none">Todo el trabajo se imprime en color. El costo se calcula sobre el total de carillas.</div>
   </div>
 
   <div class="card">
@@ -335,6 +337,7 @@ body{font-family:"Nunito",sans-serif;background:#F4F6FB;min-height:100vh;padding
 var pph=1, faz="duplex", withBinding=true;
 var uploadedFileName=null, uploadedFileSize=null;
 var lastResult=null, editingId=null, confirmandoId=null;
+var modoColor="ninguno";
 
 // CONFIG
 function getConfig(){
@@ -457,9 +460,14 @@ function changePages(d){var i=document.getElementById("pageCount");i.value=Math.
 function clampPages(){var i=document.getElementById("pageCount");if(parseInt(i.value)<1||isNaN(parseInt(i.value)))i.value=1;}
 function changeColor(d){var i=document.getElementById("colorCount");i.value=Math.max(1,(parseInt(i.value)||1)+d);}
 function clampColor(){var i=document.getElementById("colorCount");if(parseInt(i.value)<1||isNaN(parseInt(i.value)))i.value=1;}
-function toggleColor(){
-  var on=document.getElementById("colorToggle").checked;
-  document.getElementById("colorDetail").style.display=on?"block":"none";
+function setModoColor(modo){
+  modoColor=modo;
+  ["no","algunas","todo"].forEach(function(m){
+    document.getElementById("btn-color-"+m).classList.remove("active");
+  });
+  document.getElementById("btn-color-"+modo).classList.add("active");
+  document.getElementById("colorDetail").style.display=modo==="algunas"?"block":"none";
+  document.getElementById("colorTodoInfo").style.display=modo==="todo"?"block":"none";
 }
 
 // PDF
@@ -513,8 +521,20 @@ function calcularTomos(sheets){
 function calcular(){
   var c=getConfig();
   var pages=parseInt(document.getElementById("pageCount").value)||1;
-  var withColor=document.getElementById("colorToggle").checked;
-  var colorCount=withColor?(parseInt(document.getElementById("colorCount").value)||1):0;
+  var withColor=(modoColor!=="ninguno");
+  var colorCount=0;
+  if(modoColor==="algunas"){
+    colorCount=parseInt(document.getElementById("colorCount").value)||1;
+  } else if(modoColor==="todo"){
+    // Total carillas según faz
+    if(faz==="duplex"){
+      colorCount=sheets*2;
+    } else if(faz==="simple"){
+      colorCount=pages;
+    } else { // 2up
+      colorCount=sheets*2;
+    }
+  }
   var nota=document.getElementById("notaInput").value.trim();
 
   // Calcular hojas fisicas
@@ -553,7 +573,7 @@ function calcular(){
   var result={
     id:editingId||Date.now(), numPres:numPres,
     pages:pages, sheets:sheets, pph:pph, faz:faz, modeStr:modeStr, withBinding:withBinding,
-    printCost:printCost, colorCost:colorCost, colorCount:colorCount, withColor:withColor,
+    printCost:printCost, colorCost:colorCost, colorCount:colorCount, withColor:withColor, modoColor:modoColor,
     bindingCost:bindingCost, total:total, bindingDesc:bindingDesc, tomosData:tomosData,
     fileName:uploadedFileName, fileSize:uploadedFileSize, nota:nota,
     fecha:Date.now(), status:"pendiente", cliente:null
@@ -570,9 +590,10 @@ function calcular(){
   document.getElementById("r-sheets").textContent=sheets+" hojas ("+pphLabel+", "+fazLabel+")";
   document.getElementById("r-print").textContent=fmt(printCost)+" · "+sheets+" hojas × "+fmt(costoPorHoja);
 
-  if(withColor){
+  if(withColor && colorCount>0){
     document.getElementById("r-color-row").style.display="flex";
-    document.getElementById("r-color").textContent=fmt(colorCost)+" ("+colorCount+" carilla"+(colorCount>1?"s":"")+" × "+fmt(c.color)+")";
+    var labelColor=modoColor==="todo"?"todo color — ":"";
+    document.getElementById("r-color").textContent=fmt(colorCost)+" ("+labelColor+colorCount+" carilla"+(colorCount>1?"s":"")+" × "+fmt(c.color)+")";
   } else {document.getElementById("r-color-row").style.display="none";}
 
   if(withBinding&&!needsTomos){
@@ -674,9 +695,9 @@ function editarPresupuesto(id){
   editingId=id;
   setPPH(r.pph||1); setFaz(r.faz||"duplex"); setBinding(r.withBinding);
   document.getElementById("pageCount").value=r.pages;
-  document.getElementById("colorToggle").checked=r.withColor||false;
+  var mc=r.modoColor||( r.withColor ? "algunas" : "ninguno" );
+  setModoColor(mc);
   document.getElementById("colorCount").value=r.colorCount||1;
-  document.getElementById("colorDetail").style.display=r.withColor?"block":"none";
   document.getElementById("notaInput").value=r.nota||"";
   if(r.fileName){
     uploadedFileName=r.fileName; uploadedFileSize=r.fileSize||null;
@@ -700,7 +721,10 @@ function buildTexto(r,cliente){
   txt+="🗂 Hojas: "+r.sheets+" hojas\n";
   txt+="🖨 Impresión: "+md+"\n";
   txt+="💰 Impresión B&N: "+fmt(r.printCost)+"\n";
-  if(r.withColor)txt+="🎨 Color ("+r.colorCount+" carilla"+(r.colorCount>1?"s":"")+") : "+fmt(r.colorCost)+"\n";
+  if(r.withColor && r.colorCount>0){
+    var lc=r.modoColor==="todo"?"todo color — ":"";
+    txt+="🎨 Color ("+lc+r.colorCount+" carilla"+(r.colorCount>1?"s":"")+") : "+fmt(r.colorCost)+"\n";
+  }
   if(r.withBinding){
     if(r.tomosData){
       txt+="📎 Anillado "+r.tomosData.length+" tomos:\n";
@@ -733,7 +757,10 @@ function buildMailBody(r,cliente){
   txt+="Hojas a imprimir: "+r.sheets+" hojas\n";
   txt+="Tipo de impresión: "+md+"\n";
   txt+="Impresión B&N: "+fmt(r.printCost)+"\n";
-  if(r.withColor)txt+="Color ("+r.colorCount+" carilla"+(r.colorCount>1?"s":"")+") : "+fmt(r.colorCost)+"\n";
+  if(r.withColor && r.colorCount>0){
+    var lc=r.modoColor==="todo"?"todo color — ":"";
+    txt+="Color ("+lc+r.colorCount+" carilla"+(r.colorCount>1?"s":"")+") : "+fmt(r.colorCost)+"\n";
+  }
   if(r.withBinding){
     if(r.tomosData){
       txt+="Anillado "+r.tomosData.length+" tomos:\n";
