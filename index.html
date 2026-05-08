@@ -534,6 +534,8 @@ function calcular(){
     } else { // 2up
       colorCount=sheets*2;
     }
+    // Todo en color: impresión BN = $0
+    printCost=0;
   }
   var nota=document.getElementById("notaInput").value.trim();
 
@@ -588,7 +590,10 @@ function calcular(){
   document.getElementById("rPresNum").textContent="Presupuesto "+numPres;
   document.getElementById("r-pages").textContent=pages+" pág.";
   document.getElementById("r-sheets").textContent=sheets+" hojas ("+pphLabel+", "+fazLabel+")";
-  document.getElementById("r-print").textContent=fmt(printCost)+" · "+sheets+" hojas × "+fmt(costoPorHoja);
+  var printLabel=modoColor==="todo"
+    ? fmt(0)+" (todo en color, sin BN)"
+    : fmt(printCost)+" · "+sheets+" hojas × "+fmt(costoPorHoja);
+  document.getElementById("r-print").textContent=printLabel;
 
   if(withColor && colorCount>0){
     document.getElementById("r-color-row").style.display="flex";
