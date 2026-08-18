@@ -723,21 +723,6 @@ function buildTexto(r,cliente){
   if(cliente)txt+="👤 Cliente: "+cliente+"\n";
   txt+="━━━━━━━━━━━━━━━━━\n";
   if(r.fileName)txt+="📄 Archivo: "+r.fileName+(r.fileSize?" ("+fmtSize(r.fileSize)+")":"")+"\n";
-  txt+="📋 Páginas: "+r.pages+" pág.\n";
-  txt+="🗂 Hojas: "+r.sheets+" hojas\n";
-  txt+="🖨 Impresión: "+md+"\n";
-  txt+="💰 Impresión B&N: "+fmt(r.printCost)+"\n";
-  if(r.withColor && r.colorCount>0){
-    var lc=r.modoColor==="todo"?"todo color — ":"";
-    txt+="🎨 Color ("+lc+r.colorCount+" carilla"+(r.colorCount>1?"s":"")+") : "+fmt(r.colorCost)+"\n";
-  }
-  if(r.withBinding){
-    if(r.tomosData){
-      txt+="📎 Anillado "+r.tomosData.length+" tomos:\n";
-      r.tomosData.forEach(function(t){txt+="  • Tomo "+t.num+": "+t.hojas+" hojas — "+t.espiral+" — "+fmt(t.cost)+"\n";});
-      txt+="  Total anillado: "+fmt(r.bindingCost)+"\n";
-    } else {txt+="📎 Anillado ("+r.bindingDesc+"): "+fmt(r.bindingCost)+"\n";}
-  }
   if(r.nota)txt+="📝 Nota: "+r.nota+"\n";
   txt+="━━━━━━━━━━━━━━━━━\n";
   txt+="💵 *TOTAL: "+fmt(r.total)+"*\n\n";
